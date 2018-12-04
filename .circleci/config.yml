@@ -1,28 +1,46 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
-jobs:
-  build:
+version: 2.1
+
+executors:
+  go-executor:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11.2
     working_directory: /go/src/github.com/Azure/aad-pod-identity
+
+jobs:
+
+  checkout-code:
+    executor: go-executor
     steps:
       - checkout
 
-      # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
+
+      # Persist the code into the workspace for use in nexts steps. 
+      - persist_to_workspace:
+          root: /go/src/github.com/Azure/aad-pod-identity
+          paths:
+            - .
+  
+
+  run-unit-tests:
+    executor: go-executor
+    steps:
+      - attach_workspace:
+          at: .
+
       - run: go test -v $(go list ./... | grep -v test/e2e)
 
-  publish-test-images:
-    docker:
-      - image: circleci/golang:1.10
-    steps:
-      - checkout
 
-      - run: go get -v -t -d ./...
+  publish-test-images:
+    executor: go-executor
+    steps:
+      - attach_workspace:
+          at: .
+
       - run: make build
-      - run: echo $REGISTRY
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
@@ -32,23 +50,30 @@ jobs:
           docker login $DOCKER_REGISTRY_URI -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
           make image
           make push
-   
-  run-e2e-tests:
-    docker:
-      - image: circleci/golang:1.10
-    steps:
-      - checkout
 
-      - run: go get -v -t -d ./...
+
+  run-e2e-tests:
+    executor: go-executor
+    steps:
+      - attach_workspace:
+          at: .
+          
       - run: make e2e
+
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - checkout-code
 
-      - publish-test-images
+      - run-unit-tests:
+          requires:
+            - checkout-code
+
+      - publish-test-images:
+          requires:
+            - checkout-code
 
       - run-e2e-tests:
           requires:
