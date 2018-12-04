@@ -11,35 +11,21 @@ executors:
 
 jobs:
 
-  checkout-code:
+  build-and-run-unit-tests:
     executor: go-executor
     steps:
       - checkout
 
       - run: go get -v -t -d ./...
-
-      # Persist the code into the workspace for use in nexts steps. 
-      - persist_to_workspace:
-          root: /go/src/github.com/Azure/aad-pod-identity
-          paths:
-            - .
-  
-
-  run-unit-tests:
-    executor: go-executor
-    steps:
-      - attach_workspace:
-          at: .
-
       - run: go test -v $(go list ./... | grep -v test/e2e)
 
 
-  publish-test-images:
+  run-e2e-tests:
     executor: go-executor
     steps:
-      - attach_workspace:
-          at: .
-
+      - checkout
+      
+      - run: go get -v -t -d ./...
       - run: make build
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
@@ -51,13 +37,6 @@ jobs:
           make image
           make push
 
-
-  run-e2e-tests:
-    executor: go-executor
-    steps:
-      - attach_workspace:
-          at: .
-          
       - run: make e2e
 
 
@@ -65,16 +44,6 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - checkout-code
+      - build-and-run-unit-tests
 
-      - run-unit-tests:
-          requires:
-            - checkout-code
-
-      - publish-test-images:
-          requires:
-            - checkout-code
-
-      - run-e2e-tests:
-          requires:
-            - publish-test-images
+      - run-e2e-tests
