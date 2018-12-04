@@ -5,18 +5,7 @@ version: 2
 jobs:
   build:
     docker:
-      # specify the version
       - image: circleci/golang:1.10
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
     working_directory: /go/src/github.com/Azure/aad-pod-identity
     steps:
       - checkout
@@ -24,3 +13,46 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
       - run: go test -v $(go list ./... | grep -v test/e2e)
+
+  publish-test-images:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+
+      - run: go get -v -t -d ./...
+      - run: make build
+      - run: make image
+      - run: echo $REGISTRY
+      
+      #- run: curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh
+
+      # Once unit-tests pass, create docker image
+      # For security purposes, circleci requires this step to isolate remote docker commands. 
+      # More info at: https://circleci.com/docs/2.0/building-docker-images/
+      - setup_remote_docker
+
+      - run: |
+          docker login $DOCKER_REGISTRY_URI -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
+          make push
+   
+  run-e2e-tests:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+
+      - run: go get -v -t -d ./...
+      - run: make e2e
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
+
+      - publish-test-images
+
+      - run-e2e-tests:
+          requires:
+            - publish-test-images
