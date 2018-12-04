@@ -50,7 +50,7 @@ jobs:
           echo $AKS_CLUSTER_CLIENT_KEY > key.crt
           kubectl config set-credentials clusterUser --client-certificate=client.crt --client-key=key.crt --embed-certs=true --token=$AKS_CLUSTER_CLIENT_TOKEN
 
-          kubectl config set-context --cluster=e2e --user=clusterUser
+          kubectl config set-context --current --cluster=e2e --user=clusterUser
 
       - run: make e2e
 
