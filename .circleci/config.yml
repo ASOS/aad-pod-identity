@@ -22,18 +22,15 @@ jobs:
 
       - run: go get -v -t -d ./...
       - run: make build
-      - run: make image
       - run: echo $REGISTRY
       
-      #- run: curl -fsSL get.docker.com -o get-docker.sh && sh get-docker.sh
-
-      # Once unit-tests pass, create docker image
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
       - setup_remote_docker
 
       - run: |
           docker login $DOCKER_REGISTRY_URI -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
+          make image
           make push
    
   run-e2e-tests:
