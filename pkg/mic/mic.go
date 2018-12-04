@@ -167,10 +167,12 @@ func (c *Client) Sync(exit <-chan struct{}) {
 		}
 		listBindings, err := c.CRDClient.ListBindings()
 		if err != nil {
+			glog.Error(err)
 			continue
 		}
 		listIDs, err := c.CRDClient.ListIds()
 		if err != nil {
+			glog.Error(err)
 			continue
 		}
 		idMap, err := c.ConvertIDListToMap(listIDs)
@@ -181,6 +183,7 @@ func (c *Client) Sync(exit <-chan struct{}) {
 
 		currentAssignedIDs, err := c.CRDClient.ListAssignedIDs()
 		if err != nil {
+			glog.Error(err)
 			continue
 		}
 		stats.Put(stats.System, time.Since(systemTime))
@@ -192,6 +195,9 @@ func (c *Client) Sync(exit <-chan struct{}) {
 		//For any new assigned identities found in this volatile list, create assigned identity and assign user assigned msis.
 		//For any assigned ids not present the volatile list, proceed with the deletion.
 		for _, pod := range listPods {
+
+			glog.V(6).Infof("Checking pod %s/%s", pod.Namespace, pod.Name)
+
 			//Node is not yet allocated. In that case skip the pod
 			if pod.Spec.NodeName == "" {
 				continue
@@ -201,9 +207,12 @@ func (c *Client) Sync(exit <-chan struct{}) {
 				//No binding mentioned in the label. Just continue to the next pod
 				continue
 			}
+
 			//glog.Infof("Found label with our CRDKey %s for pod: %s", crdPodLabelVal, pod.Name)
 			var matchedBindings []aadpodid.AzureIdentityBinding
 			for _, allBinding := range *listBindings {
+
+				glog.V(6).Infof("Checking pod %s against binding %s. Comparing binding selector %s with pod label %s.", pod.Name, allBinding.Name, allBinding.Spec.Selector, crdPodLabelVal)
 				if allBinding.Spec.Selector == crdPodLabelVal {
 					glog.V(5).Infof("Found binding match for pod %s with binding %s", pod.Name, allBinding.Name)
 					matchedBindings = append(matchedBindings, allBinding)
@@ -282,7 +291,7 @@ func (c *Client) Sync(exit <-chan struct{}) {
 					continue
 				}
 
-				glog.V(5).Infof("Initiating assigned id creation for pod - %s, binding - %s", createID.Spec.Pod, binding.Name)
+				glog.V(5).Infof("Initiating assigned id creation for pod - %s/%s, binding - %s", createID.Spec.PodNamespace, createID.Spec.Pod, binding.Name)
 
 				err = c.CreateAssignedIdentityDeps(binding, id, createID.Spec.Pod, createID.Spec.PodNamespace, node)
 				if err != nil {
@@ -353,7 +362,7 @@ func (c *Client) SplitAzureAssignedIDs(old *[]aadpodid.AzureAssignedIdentity, ne
 				glog.Error(err)
 				continue
 			}
-			//glog.Infof("Match %s %s %v", newAssignedID.Name, oldAssignedID.Name, idMatch)
+			glog.V(6).Infof("Match %s %s %v", newAssignedID.Name, oldAssignedID.Name, idMatch)
 			if idMatch {
 				break
 			}
@@ -376,7 +385,7 @@ func (c *Client) SplitAzureAssignedIDs(old *[]aadpodid.AzureAssignedIdentity, ne
 				glog.Error(err)
 				continue
 			}
-			//glog.Infof("Match %s %s %v", newAssignedID.Name, oldAssignedID.Name, idMatch)
+			glog.V(6).Infof("Match %s %s %v", newAssignedID.Name, oldAssignedID.Name, idMatch)
 			if idMatch {
 				break
 			}
@@ -410,7 +419,7 @@ func (c *Client) MakeAssignedIDs(azID *aadpodid.AzureIdentity, azBinding *aadpod
 			AvailableReplicas: 1,
 		},
 	}
-	glog.V(5).Infof("Making assigned ID: %v", assignedID)
+	glog.V(5).Infof("Making assigned ID: %v", azID.Name)
 	return assignedID, nil
 }
 

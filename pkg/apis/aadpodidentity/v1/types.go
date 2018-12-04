@@ -150,8 +150,8 @@ const (
 // and the identities present..
 type AzureIdentityBindingSpec struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	AzureIdentity     string `json:"azureidentity"`
-	Selector          string `json:"selector"`
+	AzureIdentity     string `json:"AzureIdentity"`
+	Selector          string `json:"Selector"`
 	// Weight is used to figure out which of the matching identities would be selected.
 	Weight int `json:"weight"`
 }

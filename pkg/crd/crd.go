@@ -1,6 +1,7 @@
 package crd
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -191,10 +192,10 @@ func (c *Client) CreateAssignedIdentity(name string, binding *aadpodid.AzureIden
 		},
 	}
 
-	glog.Infof("Creating assigned Id: %s", assignedID.Name)
+	glog.Infof("Creating assigned Id: %s/%s", podNameSpace, assignedID.Name)
 	var res aadpodid.AzureAssignedIdentity
 	// TODO: Ensure that the status reflects the corresponding
-	err := c.rest.Post().Namespace("default").Resource("azureassignedidentities").Body(assignedID).Do().Into(&res)
+	err := c.rest.Post().Namespace(podNameSpace).Resource("azureassignedidentities").Body(assignedID).Do().Into(&res)
 	if err != nil {
 		glog.Error(err)
 		return err
@@ -208,7 +209,7 @@ func (c *Client) CreateAssignedIdentity(name string, binding *aadpodid.AzureIden
 func (c *Client) ListBindings() (res *[]aadpodid.AzureIdentityBinding, err error) {
 	begin := time.Now()
 	var ret aadpodid.AzureIdentityBindingList
-	err = c.rest.Get().Namespace("default").Resource("azureidentitybindings").Do().Into(&ret)
+	err = c.rest.Get().Resource("azureidentitybindings").Do().Into(&ret)
 	if err != nil {
 		glog.Error(err)
 		return nil, err
@@ -220,11 +221,18 @@ func (c *Client) ListBindings() (res *[]aadpodid.AzureIdentityBinding, err error
 func (c *Client) ListAssignedIDs() (res *[]aadpodid.AzureAssignedIdentity, err error) {
 	begin := time.Now()
 	var ret aadpodid.AzureAssignedIdentityList
-	err = c.rest.Get().Namespace("default").Resource("azureassignedidentities").Do().Into(&ret)
+	body, err := c.rest.Get().Resource("azureassignedidentities").Do().Raw()
+
 	if err != nil {
 		glog.Error(err)
 		return nil, err
 	}
+
+	if err := json.Unmarshal(body, &ret); err != nil {
+		glog.Error(err)
+		return nil, err
+	}
+
 	stats.Update(stats.AssignedIDList, time.Since(begin))
 	return &ret.Items, nil
 }
@@ -232,11 +240,19 @@ func (c *Client) ListAssignedIDs() (res *[]aadpodid.AzureAssignedIdentity, err e
 func (c *Client) ListIds() (res *[]aadpodid.AzureIdentity, err error) {
 	begin := time.Now()
 	var ret aadpodid.AzureIdentityList
-	err = c.rest.Get().Namespace("default").Resource("azureidentities").Do().Into(&ret)
+
+	body, err := c.rest.Get().Resource("azureidentities").Do().Raw()
+
 	if err != nil {
 		glog.Error(err)
 		return nil, err
 	}
+
+	if err := json.Unmarshal(body, &ret); err != nil {
+		glog.Error(err)
+		return nil, err
+	}
+
 	stats.Update(stats.IDList, time.Since(begin))
 	return &ret.Items, nil
 }
@@ -245,7 +261,7 @@ func (c *Client) ListIds() (res *[]aadpodid.AzureIdentity, err error) {
 func (c *Client) ListPodIds(podns, podname string) (*[]aadpodid.AzureIdentity, error) {
 	var azAssignedIDList aadpodid.AzureAssignedIdentityList
 	var matchedIds []aadpodid.AzureIdentity
-	err := c.rest.Get().Namespace("default").Resource("azureassignedidentities").Do().Into(&azAssignedIDList)
+	err := c.rest.Get().Namespace(podns).Resource("azureassignedidentities").Do().Into(&azAssignedIDList)
 	if err != nil {
 		glog.Error(err)
 		return nil, err
