@@ -27,6 +27,11 @@ jobs:
       
       - run: go get -v -t -d ./...
       - run: make build
+      - run: |
+          NMI_VERSION='build-'$CIRCLE_BUILD_NUM
+          MIC_VERSION='build-'$CIRCLE_BUILD_NUM
+          DEMO_VERSION='build-'$CIRCLE_BUILD_NUM
+          IDENTITY_VALIDATOR_VERSION='build-'$CIRCLE_BUILD_NUM
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
