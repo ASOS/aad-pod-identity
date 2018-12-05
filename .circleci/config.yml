@@ -43,11 +43,11 @@ jobs:
           sudo mv ./kubectl /usr/local/bin/kubectl
 
       - run: |
-          echo $AKS_CLUSTER_CA_DATA > cluster.ca.crt
-          kubectl config set-cluster e2e --server=$AKS_CLUSTER --certificate-authority=cluster.ca.crt
+          echo $AKS_CLUSTER_CA_DATA | base64 --decode > cluster.ca.crt
+          kubectl config set-cluster e2e --server=$AKS_CLUSTER --insecure-skip-tls-verify=true
 
-          echo $AKS_CLUSTER_CLIENT_CERT > client.crt
-          echo $AKS_CLUSTER_CLIENT_KEY > key.crt
+          echo $AKS_CLUSTER_CLIENT_CERT | base64 --decode > client.crt
+          echo $AKS_CLUSTER_CLIENT_KEY | base64 --decode > key.crt
           kubectl config set-credentials clusterUser --client-certificate=client.crt --client-key=key.crt --embed-certs=true --token=$AKS_CLUSTER_CLIENT_TOKEN
 
           kubectl config set-context e2e-context --cluster=e2e --user=clusterUser
