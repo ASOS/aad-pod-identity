@@ -100,7 +100,7 @@ spec:
       hostNetwork: true
       containers:
       - name: nmi
-        image: "{{.Registry}}/nmi:{{.NMI_Tag}}"
+        image: "{{.Registry}}/nmi:{{.NMIVersion}}"
         imagePullPolicy: Always
         args:
           - "--host-ip=$(HOST_IP)"
@@ -181,7 +181,7 @@ spec:
       serviceAccountName: aad-pod-id-mic-service-account
       containers:
       - name: mic
-        image: "{{.Registry}}/mic:{{.MIC_Tag}}"
+        image: "{{.Registry}}/mic:{{.MICVersion}}"
         imagePullPolicy: Always
         args:
           - "--cloudconfig=/etc/kubernetes/azure.json"

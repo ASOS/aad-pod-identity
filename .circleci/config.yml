@@ -1,26 +1,83 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
-jobs:
-  build:
+version: 2.1
+
+executors:
+  go-executor:
     docker:
-      # specify the version
-      - image: circleci/golang:1.10
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
+      - image: circleci/golang:1.11.2
     working_directory: /go/src/github.com/Azure/aad-pod-identity
+
+jobs:
+
+  build-and-run-unit-tests:
+    executor: go-executor
     steps:
       - checkout
 
-      # specify any bash command here prefixed with `run: `
       - run: go get -v -t -d ./...
       - run: go test -v $(go list ./... | grep -v test/e2e)
+
+
+  run-e2e-tests:
+    executor: go-executor
+    steps:
+      - checkout
+
+      - run: |
+          curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+          sudo apt-get install apt-transport-https lsb-release software-properties-common -y
+          AZ_REPO=$(lsb_release -cs)
+          echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
+          sudo tee /etc/apt/sources.list.d/azure-cli.list
+          sudo apt-key --keyring /etc/apt/trusted.gpg.d/Microsoft.gpg adv \
+            --keyserver packages.microsoft.com \
+            --recv-keys BC528686B50D79E339D3721CEB3E94ADBE1229CF
+          sudo apt-get update
+          sudo apt-get install azure-cli
+
+      - run: |
+          echo $AKS_CLUSTER_CA_DATA | base64 --decode > cluster.ca.crt
+          kubectl config set-cluster e2e --server=$AKS_CLUSTER --insecure-skip-tls-verify=true
+
+          echo $AKS_CLUSTER_CLIENT_CERT | base64 --decode > client.crt
+          echo $AKS_CLUSTER_CLIENT_KEY | base64 --decode > key.crt
+          kubectl config set-credentials clusterUser --client-certificate=client.crt --client-key=key.crt --embed-certs=true --token=$AKS_CLUSTER_CLIENT_TOKEN
+
+          kubectl config set-context e2e-context --cluster=e2e --user=clusterUser
+          kubectl config use-context e2e-context
+          kubectl get pods
+      
+      - run: go get -v -t -d ./...
+      
+      # For security purposes, circleci requires this step to isolate remote docker commands. 
+      # More info at: https://circleci.com/docs/2.0/building-docker-images/
+      - setup_remote_docker
+
+      - run: |
+          docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
+
+          export NMI_VERSION='build-'${CIRCLE_BUILD_NUM}
+          export MIC_VERSION='build-'${CIRCLE_BUILD_NUM}
+          export DEMO_VERSION='build-'${CIRCLE_BUILD_NUM}
+          export IDENTITY_VALIDATOR_VERSION='build-'${CIRCLE_BUILD_NUM}
+
+          make build
+          make image
+          make push
+
+          az login --service-principal -u $AZURE_SPN_NAME -p $AZURE_SPN_PASSWORD --tenant $AZURE_TENANT > /dev/null 2>&1
+          make e2e
+
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build-and-run-unit-tests
+
+      - run-e2e-tests

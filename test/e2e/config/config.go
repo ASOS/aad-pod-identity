@@ -7,7 +7,9 @@ type Config struct {
 	SubscriptionID string `envconfig:"SUBSCRIPTION_ID"`
 	ResourceGroup  string `envconfig:"RESOURCE_GROUP"`
 	AzureClientID  string `envconfig:"AZURE_CLIENT_ID"`
-	Registry  string `envconfig:"REGISTRY"`
+	MICVersion     string `envconfig:"MIC_VERSION"`
+	NMIVersion     string `envconfig:"NMI_VERSION"`
+	Registry       string `envconfig:"REGISTRY"`
 }
 
 // ParseConfig will parse needed environment variables for running the tests
