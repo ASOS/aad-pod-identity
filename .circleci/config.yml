@@ -53,7 +53,6 @@ jobs:
           kubectl get pods
       
       - run: go get -v -t -d ./...
-      - run: make build
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
@@ -67,6 +66,7 @@ jobs:
           export DEMO_VERSION='build-${CIRCLE_BUILD_NUM}'
           export IDENTITY_VALIDATOR_VERSION='build-${CIRCLE_BUILD_NUM}'
 
+          make build
           make image
           make push
 
