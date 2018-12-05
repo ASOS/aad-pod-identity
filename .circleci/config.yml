@@ -69,6 +69,8 @@ jobs:
 
           make image
           make push
+
+          az login --service-principal -u $AZURE_SPN_NAME -p $AZURE_SPN_PASSWORD --tenant $AZURE_TENANT
           make e2e
 
 
