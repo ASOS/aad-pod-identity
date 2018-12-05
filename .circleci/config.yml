@@ -51,6 +51,7 @@ jobs:
           kubectl config set-credentials clusterUser --client-certificate=client.crt --client-key=key.crt --embed-certs=true --token=$AKS_CLUSTER_CLIENT_TOKEN
 
           kubectl config set-context e2e-context --cluster=e2e --user=clusterUser
+          kubectl config use-context e2e-context
           kubectl get pods
 
       - run: make e2e
