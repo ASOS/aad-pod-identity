@@ -70,7 +70,7 @@ jobs:
           make image
           make push
 
-          az login --service-principal -u $AZURE_SPN_NAME -p $AZURE_SPN_PASSWORD --tenant $AZURE_TENANT
+          az login --service-principal -u $AZURE_SPN_NAME -p $AZURE_SPN_PASSWORD --tenant $AZURE_TENANT > /dev/null 2>&1
           make e2e
 
 
