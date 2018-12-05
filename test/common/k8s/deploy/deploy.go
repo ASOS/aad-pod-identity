@@ -81,7 +81,7 @@ func CreateInfra(namespace, registry, nmiVersion, micVersion, templateOutputPath
 }
 
 // CreateIdentityValidator will create an identity validator deployment on a Kubernetes cluster
-func CreateIdentityValidator(subscriptionID, resourceGroup, registryName, name, identityBinding, templateOutputPath string) error {
+func CreateIdentityValidator(subscriptionID, resourceGroup, registryName, name, identityBinding, identityValidatorVersion, templateOutputPath string) error {
 	t, err := template.New("deployment.yaml").ParseFiles(path.Join("template", "deployment.yaml"))
 	if err != nil {
 		return errors.Wrap(err, "Failed to parse deployment.yaml")
@@ -95,13 +95,15 @@ func CreateIdentityValidator(subscriptionID, resourceGroup, registryName, name, 
 	defer deployFile.Close()
 
 	deployData := struct {
-		Name            string
-		IdentityBinding string
-		Registry		string
+		Name                     string
+		IdentityBinding          string
+		Registry                 string
+		IdentityValidatorVersion string
 	}{
 		name,
 		identityBinding,
 		registryName,
+		identityValidatorVersion,
 	}
 	if err := t.Execute(deployFile, deployData); err != nil {
 		return errors.Wrap(err, "Failed to create a deployment file from deployment.yaml")

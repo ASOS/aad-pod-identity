@@ -64,7 +64,7 @@ var _ = Describe("Kubernetes cluster using aad-pod-identity", func() {
 		err = azureidentitybinding.Create("test-identity", templateOutputPath)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = deploy.CreateIdentityValidator(cfg.SubscriptionID, cfg.ResourceGroup, cfg.Registry, "identity-validator", "test-identity", templateOutputPath)
+		err = deploy.CreateIdentityValidator(cfg.SubscriptionID, cfg.ResourceGroup, cfg.Registry, "identity-validator", "test-identity", cfg.IdentityValidatorVersion, templateOutputPath)
 		Expect(err).NotTo(HaveOccurred())
 
 		ok, err := deploy.WaitOnReady("identity-validator")
