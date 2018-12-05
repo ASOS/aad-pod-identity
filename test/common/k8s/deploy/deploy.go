@@ -41,6 +41,45 @@ type Status struct {
 	AvailableReplicas int `json:"availableReplicas"`
 }
 
+// CreateInfra will deploy all the infrastructure components (nmi and mic) on a Kubernetes cluster
+func CreateInfra(namespace, registry, nmiVersion, micVersion, templateOutputPath string) error {
+	t, err := template.New("deployment-rbac.yaml").ParseFiles(path.Join("template", "deployment-rbac.yaml"))
+	if err != nil {
+		return errors.Wrap(err, "Failed to parse deployment-rbac.yaml")
+	}
+
+	deployFilePath := path.Join(templateOutputPath, namespace+"-deployment-rbac.yaml")
+	deployFile, err := os.Create(deployFilePath)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create a deployment file from deployment-rbac.yaml")
+	}
+	defer deployFile.Close()
+
+	deployData := struct {
+		Namespace  string
+		Registry   string
+		NMIVersion string
+		MICVersion string
+	}{
+		namespace,
+		registry,
+		nmiVersion,
+		micVersion,
+	}
+	if err := t.Execute(deployFile, deployData); err != nil {
+		return errors.Wrap(err, "Failed to create a deployment file from deployment-rbac.yaml")
+	}
+
+	cmd := exec.Command("kubectl", "apply", "-f", deployFilePath)
+	util.PrintCommand(cmd)
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		return errors.Wrap(err, "Failed to deploy Infrastructure to the Kubernetes cluster")
+	}
+
+	return nil
+}
+
 // CreateIdentityValidator will create an identity validator deployment on a Kubernetes cluster
 func CreateIdentityValidator(subscriptionID, resourceGroup, name, identityBinding, templateOutputPath string) error {
 	t, err := template.New("deployment.yaml").ParseFiles(path.Join("template", "deployment.yaml"))

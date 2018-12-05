@@ -36,9 +36,7 @@ var _ = BeforeSuite(func() {
 	cfg = *c // To avoid 'Declared and not used' linting error
 
 	// Install CRDs and deploy MIC and NMI
-	cmd := exec.Command("kubectl", "apply", "-f", "../../deploy/infra/deployment-rbac.yaml")
-	util.PrintCommand(cmd)
-	_, err = cmd.CombinedOutput()
+	err = deploy.CreateInfra("default", cfg.Registry, cfg.NMIVersion, cfg.MICVersion, templateOutputPath)
 	Expect(err).NotTo(HaveOccurred())
 })
 
