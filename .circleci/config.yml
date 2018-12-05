@@ -54,7 +54,6 @@ jobs:
       
       - run: go get -v -t -d ./...
       - run: make build
-      - run: |
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
@@ -71,7 +70,7 @@ jobs:
           make image
           make push
           make e2e
-          
+
 
 workflows:
   version: 2
