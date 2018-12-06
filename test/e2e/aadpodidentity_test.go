@@ -31,9 +31,8 @@ var _ = BeforeSuite(func() {
 	err := os.Mkdir(templateOutputPath, os.ModePerm)
 	Expect(err).NotTo(HaveOccurred())
 
-	c, err := config.ParseConfig()
+	cfg, err := config.ParseConfig()
 	Expect(err).NotTo(HaveOccurred())
-	cfg = *c // To avoid 'Declared and not used' linting error
 
 	// Install CRDs and deploy MIC and NMI
 	err = deploy.CreateInfra("default", cfg.Registry, cfg.NMIVersion, cfg.MICVersion, templateOutputPath)
