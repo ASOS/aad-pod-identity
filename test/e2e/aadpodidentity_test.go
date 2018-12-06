@@ -44,10 +44,7 @@ var _ = AfterSuite(func() {
 	fmt.Println("Tearing down the test suite environment...")
 
 	// Uninstall CRDs and delete MIC and NMI
-	deployFilePath := path.Join(templateOutputPath, "deployment-rbac.yaml")
-	cmd := exec.Command("kubectl", "delete", "-f", deployFilePath, "--ignore-not-found")
-	util.PrintCommand(cmd)
-	_, err := cmd.CombinedOutput()
+	err := deploy.Delete("default-deployment-rbac.yaml", templateOutputPath)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = os.RemoveAll(templateOutputPath)
@@ -166,7 +163,7 @@ var _ = Describe("Kubernetes cluster using aad-pod-identity", func() {
 	})
 
 	It("should delete the AzureAssignedIdentity if the deployment is deleted", func() {
-		err := deploy.Delete("identity-validator", templateOutputPath)
+		err := deploy.Delete("identity-validator-deployment.yaml", templateOutputPath)
 		Expect(err).NotTo(HaveOccurred())
 
 		ok, err := azureassignedidentity.WaitOnDeletion()

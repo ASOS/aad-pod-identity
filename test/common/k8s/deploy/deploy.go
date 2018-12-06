@@ -121,11 +121,11 @@ func CreateIdentityValidator(subscriptionID, resourceGroup, registryName, name, 
 
 // Delete will delete a deployment on a Kubernetes cluster
 func Delete(name, templateOutputPath string) error {
-	cmd := exec.Command("kubectl", "delete", "-f", path.Join(templateOutputPath, name+"-deployment.yaml"), "--now", "--ignore-not-found")
+	cmd := exec.Command("kubectl", "delete", "-f", path.Join(templateOutputPath, name), "--now", "--ignore-not-found")
 	util.PrintCommand(cmd)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "Failed to delete AzureIdentityBinding from the Kubernetes cluster")
+		return errors.Wrapf(err, "Failed to delete %v from the Kubernetes cluster", name)
 	}
 
 	return nil
