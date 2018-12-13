@@ -57,10 +57,11 @@ func (c *TestCrdClient) CreateAssignedIdentity(name string, binding *aadpodid.Az
 	return nil
 }
 
-func (c *TestCrdClient) CreateBinding(bindingName string, idName string, selector string) {
+func (c *TestCrdClient) CreateBinding(bindingName string, bindingNamespace string, idName string, selector string) {
 	binding := &aadpodid.AzureIdentityBinding{
 		ObjectMeta: v1.ObjectMeta{
 			Name: bindingName,
+			Namespace: bindingNamespace,
 		},
 		Spec: aadpodid.AzureIdentityBindingSpec{
 			AzureIdentity: idName,
@@ -70,10 +71,11 @@ func (c *TestCrdClient) CreateBinding(bindingName string, idName string, selecto
 	c.bindingMap[bindingName] = binding
 }
 
-func (c *TestCrdClient) CreateId(idName string, t aadpodid.IdentityType, rId string, cId string, cp *api.SecretReference, tId string, adRId string, adEpt string) {
+func (c *TestCrdClient) CreateId(idName string, idNamespace string, t aadpodid.IdentityType, rId string, cId string, cp *api.SecretReference, tId string, adRId string, adEpt string) {
 	id := &aadpodid.AzureIdentity{
 		ObjectMeta: v1.ObjectMeta{
 			Name: idName,
+			Namespace: idNamespace,
 		},
 		Spec: aadpodid.AzureIdentitySpec{
 			Type:       t,

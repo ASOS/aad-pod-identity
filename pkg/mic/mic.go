@@ -210,18 +210,30 @@ func (c *Client) Sync(exit <-chan struct{}) {
 
 			//glog.Infof("Found label with our CRDKey %s for pod: %s", crdPodLabelVal, pod.Name)
 			var matchedBindings []aadpodid.AzureIdentityBinding
-			for _, allBinding := range *listBindings {
+			for _, idBinding := range *listBindings {
 
-				glog.V(6).Infof("Checking pod %s against binding %s. Comparing binding selector %s with pod label %s.", pod.Name, allBinding.Name, allBinding.Spec.Selector, crdPodLabelVal)
-				if allBinding.Spec.Selector == crdPodLabelVal {
-					glog.V(5).Infof("Found binding match for pod %s with binding %s", pod.Name, allBinding.Name)
-					matchedBindings = append(matchedBindings, allBinding)
+				glog.V(6).Infof("Checking pod %s against binding %s. Comparing binding selector %s with pod label %s.", pod.Name, idBinding.Name, idBinding.Spec.Selector, crdPodLabelVal)
+				if idBinding.Spec.Selector == crdPodLabelVal {
+					glog.V(5).Infof("Found binding match for pod %s with binding %s", pod.Name, idBinding.Name)
+
+					if idBinding.Namespace != "default" && idBinding.Namespace != pod.Namespace {
+						glog.V(5).Infof("Namespace mismatch for pod %s and binding %s", pod.Namespace, idBinding.Namespace)
+						continue
+					}
+
+					matchedBindings = append(matchedBindings, idBinding)
 				}
 			}
 
 			for _, binding := range matchedBindings {
 				glog.V(5).Infof("Looking up id map: %v", binding.Spec.AzureIdentity)
 				if azureID, idPresent := idMap[binding.Spec.AzureIdentity]; idPresent {
+
+					if azureID.Namespace != "default" && azureID.Namespace != binding.Namespace {
+						glog.V(5).Infof("Namespace mismatch for identity %s and binding %s", azureID.Namespace, binding.Namespace)
+						continue
+					}
+
 					glog.V(5).Infof("Id %s got for assigning", azureID.Name)
 					assignedID, err := c.MakeAssignedIDs(&azureID, &binding, pod.Name, pod.Namespace, pod.Spec.NodeName)
 
