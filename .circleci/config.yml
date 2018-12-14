@@ -87,8 +87,8 @@ jobs:
       - run: |
           docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
           
-          export NMI_BETA_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
-          export MIC_BETA_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
+          export NMI_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
+          export MIC_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
           export REGISTRY=$BETA_REGISTRY
           
           make build-nmi && make build-mic
