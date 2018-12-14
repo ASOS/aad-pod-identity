@@ -6,7 +6,7 @@ version: 2.1
 executors:
   go-executor:
     docker:
-      - image: circleci/golang:1.11.2
+      - image: circleci/golang:1.11.2-node
     working_directory: /go/src/github.com/Azure/aad-pod-identity
 
 jobs:
@@ -77,6 +77,8 @@ jobs:
     executor: go-executor
     steps:
       - checkout
+
+      - run: npm i -g snyk
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
@@ -85,16 +87,17 @@ jobs:
       - run: |
           docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
           
-          export NMI_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
-          export MIC_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
           export NMI_BETA_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
           export MIC_BETA_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
+          export REGISTRY=$BETA_REGISTRY
+          
+          make build-nmi && make build-mic
+          make image-nmi && make image-mic
 
-          docker pull $REGISTRY/nmi:$NMI_VERSION
-          docker pull $REGISTRY/mic:$MIC_VERSION
+          snyk test --docker $REGISTRY/nmi:$NMI_VERSION
+          snyk test --docker $REGISTRY/nmi:$MIC_VERSION
 
-          docker tag $REGISTRY/nmi:$NMI_VERSION $BETA_REGISTRY/nmi:$NMI_BETA_VERSION
-          docker tag $REGISTRY/mic:$MIC_VERSION $BETA_REGISTRY/mic:$MIC_BETA_VERSION 
+          make push-nmi && make push-mic
 
 workflows:
   version: 2
