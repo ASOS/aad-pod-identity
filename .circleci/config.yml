@@ -73,12 +73,14 @@ jobs:
           az login --service-principal -u $AZURE_SPN_NAME -p $AZURE_SPN_PASSWORD --tenant $AZURE_TENANT > /dev/null 2>&1
           make e2e
 
+          docker logout
+
   publish-beta-images:
     executor: go-executor
     steps:
       - checkout
 
-      - run: npm i -g snyk
+      - run: sudo npm i -g snyk
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
@@ -99,6 +101,8 @@ jobs:
           snyk test --docker $REGISTRY/nmi:$MIC_VERSION
 
           make push-nmi && make push-mic
+
+          docker logout
 
 workflows:
   version: 2
