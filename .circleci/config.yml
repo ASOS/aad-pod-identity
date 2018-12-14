@@ -81,6 +81,8 @@ jobs:
       - checkout
 
       - run: sudo npm i -g snyk
+
+      - run: go get -v -t -d ./...
       
       # For security purposes, circleci requires this step to isolate remote docker commands. 
       # More info at: https://circleci.com/docs/2.0/building-docker-images/
@@ -88,7 +90,6 @@ jobs:
 
       - run: |
           echo $DOCKER_REGISTRY_SERVER_PASSWORD | docker login -u $DOCKER_REGISTRY_SERVER_USERNAME --password-stdin
-
           
           export NMI_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
           export MIC_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
