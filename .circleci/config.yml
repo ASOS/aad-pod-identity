@@ -61,10 +61,10 @@ jobs:
       - run: |
           docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
 
-          export NMI_VERSION='build-'${CIRCLE_BUILD_NUM}
-          export MIC_VERSION='build-'${CIRCLE_BUILD_NUM}
-          export DEMO_VERSION='build-'${CIRCLE_BUILD_NUM}
-          export IDENTITY_VALIDATOR_VERSION='build-'${CIRCLE_BUILD_NUM}
+          export NMI_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
+          export MIC_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
+          export DEMO_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
+          export IDENTITY_VALIDATOR_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
 
           make build
           make image
@@ -73,6 +73,28 @@ jobs:
           az login --service-principal -u $AZURE_SPN_NAME -p $AZURE_SPN_PASSWORD --tenant $AZURE_TENANT > /dev/null 2>&1
           make e2e
 
+  publish-beta-images:
+    executor: go-executor
+    steps:
+      - checkout
+      
+      # For security purposes, circleci requires this step to isolate remote docker commands. 
+      # More info at: https://circleci.com/docs/2.0/building-docker-images/
+      - setup_remote_docker
+
+      - run: |
+          docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
+          
+          export NMI_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
+          export MIC_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
+          export NMI_BETA_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
+          export MIC_BETA_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
+
+          docker pull $REGISTRY/nmi:$NMI_VERSION
+          docker pull $REGISTRY/mic:$MIC_VERSION
+
+          docker tag $REGISTRY/nmi:$NMI_VERSION $BETA_REGISTRY/nmi:$NMI_BETA_VERSION
+          docker tag $REGISTRY/mic:$MIC_VERSION $BETA_REGISTRY/mic:$MIC_BETA_VERSION 
 
 workflows:
   version: 2
@@ -81,3 +103,8 @@ workflows:
       - build-and-run-unit-tests
 
       - run-e2e-tests
+
+      - publish-beta-images:
+          requires:
+            - build-and-run-unit-tests
+            - run-e2e-tests
