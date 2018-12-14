@@ -59,7 +59,7 @@ jobs:
       - setup_remote_docker
 
       - run: |
-          docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
+          echo $DOCKER_REGISTRY_SERVER_PASSWORD | docker login -u $DOCKER_REGISTRY_SERVER_USERNAME --password-stdin
 
           export NMI_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
           export MIC_VERSION='1.4-build-'${CIRCLE_BUILD_NUM}
@@ -85,7 +85,8 @@ jobs:
       - setup_remote_docker
 
       - run: |
-          docker login -u $DOCKER_REGISTRY_SERVER_USERNAME -p $DOCKER_REGISTRY_SERVER_PASSWORD
+          echo $DOCKER_REGISTRY_SERVER_PASSWORD | docker login -u $DOCKER_REGISTRY_SERVER_USERNAME --password-stdin
+
           
           export NMI_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
           export MIC_VERSION='1.4-beta-'${CIRCLE_BUILD_NUM}
