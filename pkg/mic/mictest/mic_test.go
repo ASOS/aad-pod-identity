@@ -2,6 +2,7 @@ package mictest
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -12,6 +13,118 @@ import (
 	pod "github.com/Azure/aad-pod-identity/pkg/pod/podtest"
 	"github.com/golang/glog"
 )
+
+func testPositiveCases(t *testing.T, podNamespace string, idNamespace string, bindingNamespace string) {
+
+	exit := make(<-chan struct{}, 0)
+	eventCh := make(chan aadpodid.EventType, 100)
+	cloudClient := cp.NewTestCloudClient(config.AzureConfig{})
+	crdClient := crd.NewTestCrdClient(nil)
+	podClient := pod.NewTestPodClient()
+	nodeClient := NewTestNodeClient()
+	var evtRecorder TestEventRecorder
+	evtRecorder.lastEvent = new(LastEvent)
+
+	micClient := NewMICClient(eventCh, cloudClient, crdClient, podClient, nodeClient, &evtRecorder)
+
+	crdClient.CreateId("test-id", idNamespace, aadpodid.UserAssignedMSI, "test-user-msi-resourceid", "test-user-msi-clientid", nil, "", "", "")
+	crdClient.CreateBinding("testbinding", bindingNamespace, "test-id", "test-select")
+
+	nodeClient.AddNode("test-node")
+	podClient.AddPod("test-pod", podNamespace, "test-node", "test-select")
+	podClient.GetPods()
+
+	eventCh <- aadpodid.PodCreated
+	go micClient.Sync(exit)
+	time.Sleep(2 * time.Second)
+	testPass := false
+	listAssignedIDs, err := crdClient.ListAssignedIDs()
+	if err != nil {
+		glog.Error(err)
+		panic("list assigned failed")
+	}
+	if listAssignedIDs != nil {
+		for _, assignedID := range *listAssignedIDs {
+			if assignedID.Spec.Pod == "test-pod" && assignedID.Spec.PodNamespace == podNamespace && assignedID.Spec.NodeName == "test-node" &&
+				assignedID.Spec.AzureBindingRef.Name == "testbinding" && assignedID.Spec.AzureIdentityRef.Name == "test-id" {
+				testPass = evtRecorder.Validate(&LastEvent{Type: "Normal", Reason: "binding applied",
+					Message: fmt.Sprintf("Binding testbinding applied on node test-node for pod test-pod-%s-test-id", podNamespace)})
+				if !testPass {
+					panic("event mismatch")
+				}
+				break
+			}
+		}
+	}
+
+	if !testPass {
+		panic(fmt.Sprintf("assigned id mismatch for namespaces: pod: %s, binding: %s, id: %s", podNamespace, bindingNamespace, idNamespace))
+	}
+}
+
+func testNegativeCases(t *testing.T, podNamespace string, idNamespace string, bindingNamespace string) {
+
+	exit := make(<-chan struct{}, 0)
+	eventCh := make(chan aadpodid.EventType, 100)
+	cloudClient := cp.NewTestCloudClient(config.AzureConfig{})
+	crdClient := crd.NewTestCrdClient(nil)
+	podClient := pod.NewTestPodClient()
+	nodeClient := NewTestNodeClient()
+	var evtRecorder TestEventRecorder
+	evtRecorder.lastEvent = new(LastEvent)
+
+	micClient := NewMICClient(eventCh, cloudClient, crdClient, podClient, nodeClient, &evtRecorder)
+
+	crdClient.CreateId("test-id", idNamespace, aadpodid.UserAssignedMSI, "test-user-msi-resourceid", "test-user-msi-clientid", nil, "", "", "")
+	crdClient.CreateBinding("testbinding", bindingNamespace, "test-id", "test-select")
+
+	nodeClient.AddNode("test-node")
+	podClient.AddPod("test-pod", podNamespace, "test-node", "test-select")
+	podClient.GetPods()
+
+	eventCh <- aadpodid.PodCreated
+	go micClient.Sync(exit)
+	time.Sleep(2 * time.Second)
+	testPass := false
+	listAssignedIDs, err := crdClient.ListAssignedIDs()
+	if err != nil {
+		glog.Error(err)
+		panic("list assigned failed")
+	}
+	if listAssignedIDs != nil {
+		for _, assignedID := range *listAssignedIDs {
+			if assignedID.Spec.Pod == "test-pod" && assignedID.Spec.PodNamespace == podNamespace && assignedID.Spec.NodeName == "test-node" &&
+				assignedID.Spec.AzureBindingRef.Name == "testbinding" && assignedID.Spec.AzureIdentityRef.Name == "test-id" {
+				testPass = evtRecorder.Validate(&LastEvent{Type: "Normal", Reason: "binding applied",
+					Message: fmt.Sprintf("Binding testbinding applied on node test-node for pod test-pod-%s-test-id", podNamespace)})
+				break
+			}
+		}
+	}
+
+	if testPass {
+		panic(fmt.Sprintf("assigned id to an unsupported scenario for namespaces: pod: %s, binding: %s, id: %s", podNamespace, bindingNamespace, idNamespace))
+	}
+}
+func TestSupportedScenarios(t *testing.T) {
+
+	testPositiveCases(t, "custom-app-ns", "custom-app-ns", "custom-app-ns")
+	testPositiveCases(t, "custom-app-ns", "default", "custom-app-ns")
+	testPositiveCases(t, "custom-app-ns", "default", "default")
+}
+
+func TestNotSupportedScenarios(t *testing.T) {
+
+	testNegativeCases(t, "custom-app1-ns", "custom-app2-ns", "custom-app2-ns")
+	testNegativeCases(t, "custom-app1-ns", "custom-app2-ns", "custom-app3-ns")
+	testNegativeCases(t, "custom-app1-ns", "default", "custom-app2-ns")
+	testNegativeCases(t, "custom-app1-ns", "custom-app2-ns", "default")
+	testNegativeCases(t, "default", "custom-app1-ns", "custom-app1-ns")
+	testNegativeCases(t, "default", "default", "custom-app1-ns")
+	testNegativeCases(t, "default", "custom-app1-ns", "default")
+}
+
+// get right identity - can we have multiple identities with same name?
 
 func TestMapMICClient(t *testing.T) {
 	micClient := &TestMICClient{}
@@ -70,8 +183,8 @@ func TestSimpleMICClient(t *testing.T) {
 
 	micClient := NewMICClient(eventCh, cloudClient, crdClient, podClient, nodeClient, &evtRecorder)
 
-	crdClient.CreateId("test-id", aadpodid.UserAssignedMSI, "test-user-msi-resourceid", "test-user-msi-clientid", nil, "", "", "")
-	crdClient.CreateBinding("testbinding", "test-id", "test-select")
+	crdClient.CreateId("test-id", "default", aadpodid.UserAssignedMSI, "test-user-msi-resourceid", "test-user-msi-clientid", nil, "", "", "")
+	crdClient.CreateBinding("testbinding", "default", "test-id", "test-select")
 
 	nodeClient.AddNode("test-node")
 	podClient.AddPod("test-pod", "default", "test-node", "test-select")
